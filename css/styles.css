@@ -225,3 +225,20 @@ button:hover {
     display: flex;
     align-items: center;
 }
+
+.estado{
+    padding: 0px;
+    margin: 0px;
+}
+
+input[type="checkbox"] {
+    margin: 0px;
+    margin-top:10px;
+    padding: 0px;
+}
+
+#completo{
+    margin: 0px;
+    margin-top:10px;
+    padding: 0px;
+}

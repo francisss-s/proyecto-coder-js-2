@@ -6,6 +6,16 @@ document.addEventListener('DOMContentLoaded', function () {
     loadFromLocalStorage();
 });
 
+
+document.getElementById('completado').addEventListener('change', function () {
+    let $p = document.getElementById('completo')
+    if (this.checked) {
+        $p.innerHTML = 'Finalizado';
+    } else {
+        $p.innerHTML = 'Pendiente';
+    }
+});
+
 function abrirPopup(tipo) {
     if (tipo === 'item') {
         document.getElementById('popupForm').classList.remove('hidden');
