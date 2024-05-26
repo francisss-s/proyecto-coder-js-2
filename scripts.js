@@ -151,10 +151,6 @@ function cargaCategoriasSelect() {
     option.text = 'Seleccionar Categoría';
     select.appendChild(option);
 
-    let newOption = document.createElement('option');
-    newOption.value = 'new';
-    newOption.text = 'Agregar Nueva Categoria';
-    select.appendChild(newOption);
 
     data.categoria.forEach(categoria => {
         let option = document.createElement('option');
