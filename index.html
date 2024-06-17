@@ -5,6 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control de Películas y Series</title>
     <link rel="stylesheet" href="./css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/base.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script type="module">
+        import { 
+            mostrarPopupAuth, 
+            cerrarPopupAuth, 
+            registrarUsuario, 
+            autenticarUsuario, 
+            agregarElemento, 
+            buscarElemento, 
+            ordenarPorCategoria, 
+            abrirPopup,
+            cerrarPopup,
+            cerrarPopupCategoria,
+            agregarCategoria,
+            guardarEdicion
+        } from './scripts.js';
+
+        // Asigna las funciones a window para que puedan ser accesibles en el HTML
+        window.mostrarPopupAuth = mostrarPopupAuth;
+        window.cerrarPopupAuth = cerrarPopupAuth;
+        window.registrarUsuario = registrarUsuario;
+        window.autenticarUsuario = autenticarUsuario;
+        window.agregarElemento = agregarElemento;
+        window.buscarElemento = buscarElemento;
+        window.ordenarPorCategoria = ordenarPorCategoria;
+        window.abrirPopup = abrirPopup;
+        window.cerrarPopup = cerrarPopup;
+        window.cerrarPopupCategoria = cerrarPopupCategoria;
+        window.agregarCategoria = agregarCategoria;
+        window.guardarEdicion = guardarEdicion;
+    </script>
 </head>
 <body>
     <!-- Div que solo será visible en desktop -->
@@ -19,10 +52,23 @@
             <input type="text" id="searchInput" placeholder="Buscar por nombre" onkeyup="buscarElemento()">
             <button class="sort-btn" onclick="ordenarPorCategoria()">Ordenar por Categoría</button>
             <button class="add-btn" onclick="abrirPopup('item')">+</button>
+            <button class="auth-btn" onClick="mostrarPopupAuth('login')">Iniciar Sesión</button>
+            <button class="auth-btn" onClick="mostrarPopupAuth('register')">Registrarse</button>
         </header>
         
         <ul id="list"></ul>
         <ul id="categoriaList" class="hidden"></ul>
+    </div>
+    
+    <!-- Popup modal para iniciar sesión y registrarse -->
+    <div id="popupAuth" class="popup hidden">
+        <div class="popup-content">
+            <span class="close" onclick="cerrarPopupAuth()">&times;</span>
+            <h2 id="authTitle">Iniciar Sesión</h2>
+            <input type="email" id="authEmail" placeholder="Correo Electrónico" required>
+            <input type="password" id="authPassword" placeholder="Contraseña" required>
+            <button id="authAction" onclick="autenticarUsuario()">Ingresar</button>
+        </div>
     </div>
 
     <!-- Popup modal -->
@@ -30,7 +76,7 @@
         <div class="popup-content">
             <span class="close" onclick="cerrarPopup()">&times;</span>
             <h2 id="popupTitle">Agregar Película/Serie</h2>
-            <input class="entrada" type="text" id="nombre" placeholder="Nombre" required>
+            <select class="entrada" type="text" id="nombre" placeholder="Nombre" required></select>
             <select class="entrada" name="tipo" id="tipo"></select>
             <input class="entrada" type="number" id="episodios" placeholder="Número de Capítulos (si es una serie)">
             <div class="categoria-select">
@@ -55,7 +101,5 @@
             <button id="agregarCategoria" onclick="agregarCategoria()">Agregar</button>
         </div>
     </div>
-
-    <script src="scripts.js"></script>
 </body>
 </html>
