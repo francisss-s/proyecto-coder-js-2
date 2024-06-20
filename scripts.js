@@ -13,13 +13,13 @@ const utils = {
 let itemEditadoId = null;
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBc1Yc-lxevrRg7LM6rCLGY_lKEejQFmvk",
-  authDomain: "listapeliculas-294af.firebaseapp.com",
-  projectId: "listapeliculas-294af",
-  storageBucket: "listapeliculas-294af.appspot.com",
-  messagingSenderId: "146290876971",
-  appId: "1:146290876971:web:da4e22c8ef14b06b01806e",
-  measurementId: "G-SR7SD1M1NJ"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 document.addEventListener("DOMContentLoaded", function () {
