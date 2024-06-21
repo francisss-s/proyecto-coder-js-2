@@ -3,6 +3,7 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.9.0/firebas
 import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js'
 import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js'
 import { firebaseConfig, rapidApiConfig } from './config.js'
+
 let searchTimeout
 let selectedItem = null
 const fireBaseConf = {
@@ -407,8 +408,8 @@ async function buscarAgregarOpciones (query) {
   const options = {
     method: 'GET',
     headers: {
-      'x-rapidapi-key': rapidApiConfig.apiKey,
-      'x-rapidapi-host': rapidApiConfig.host
+      'x-rapidapi-key': rapidApiConfig.API_RAPID,
+      'x-rapidapi-host': rapidApiConfig.API_HOST
     }
   }
 
