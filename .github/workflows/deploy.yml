@@ -36,10 +36,6 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./
 
-    - name: Set environment URL
-      id: deployment
-      run: echo "url=${{ github.event.repository.html_url }}" >> $GITHUB_ENV
-
   environment:
     name: github-pages
-    url: ${{ steps.deployment.outputs.page_url }}
+    url: ${{ steps.build.outputs.page_url }}
