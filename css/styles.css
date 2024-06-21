@@ -1,0 +1,291 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0;
+    overflow-x: hidden;
+    color: #333;
+}
+
+.desktop {
+    display: none;
+}
+
+.container {
+    padding: 20px;
+}
+
+header {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+header button {
+    margin: 5px 0;
+}
+
+@media (min-width: 768px) {
+    .desktop {
+        display: block;
+        text-align: center;
+    }
+    .container {
+        display: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .desktop {
+        display: none;
+    }
+    .container {
+        display: block;
+    }
+}
+
+input[type="text"], select {
+    margin-bottom: 10px;
+    padding: 10px;
+    width: 90%;
+    max-width: 300px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.sort-btn, .auth-btn, .add-btn {
+    background-color: #007bff;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.sort-btn:hover, .auth-btn:hover, .add-btn:hover {
+    background-color: #0056b3;
+}
+
+.add-btn {
+    font-size: 24px;
+    background-color: #28a745;
+}
+
+ul {
+    list-style-type: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    width: calc(50% - 10px);
+    box-sizing: border-box;
+    position: relative;
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.card p {
+    margin: 10px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.card .edit-button, .card .delete-button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px;
+    cursor: pointer;
+    margin-right: 5px;
+}
+
+.card .delete-button {
+    background-color: #dc3545;
+}
+
+.card .delete-button::after {
+    content: 'X';
+    font-weight: bold;
+}
+
+.card .edit-button:hover {
+    background-color: #0056b3;
+}
+
+.card .delete-button:hover {
+    background-color: #c82333;
+}
+
+/* Popup modal */
+.popup {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.popup-content {
+    background-color: #fff;
+    padding: 20px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    width: 80%;
+    max-width: 400px;
+    text-align: center;
+}
+
+.hidden {
+    display: none;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+    color: black;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+input, select {
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100%;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+.entrada {
+    margin-bottom: 10px;
+    padding: 10px;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    display: block;
+}
+
+.btnCategoriaAgr {
+    display: inline-block;
+    height: 2.5rem;
+    width: 2.5rem;
+    margin-left: 10px;
+    font-size: 24px;
+    background: #28a745;
+    color: white;
+    border: none;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.categoria-select {
+    display: flex;
+    align-items: center;
+}
+
+.estado {
+    padding: 0px;
+    margin: 0px;
+}
+
+input[type="checkbox"] {
+    margin: 0px;
+    margin-top: 10px;
+    padding: 0px;
+}
+
+#completo {
+    margin: 0px;
+    margin-top: 10px;
+    padding: 0px;
+}
+
+#nombreElm {
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    position: absolute;
+    background: white;
+    width: 90%;
+    z-index: 1000;
+    display: none; /* Ocultar inicialmente */
+}
+
+.autocomplete-item {
+    padding: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+}
+
+.autocomplete-item img {
+    margin-right: 10px;
+}
+
+.autocomplete-item span {
+    margin-right: 5px;
+}
+
+.autocomplete-item:hover {
+    background-color: #f0f0f0;
+}
+
+/* New Styles for Categoria Divs and Active States */
+.catDiv {
+    width: 100%;
+    border: 2px solid #ccc;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 10px;
+    background-color: #fff;
+}
+
+.catElem {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.is-active {
+    background-color: #a3c4e8;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
