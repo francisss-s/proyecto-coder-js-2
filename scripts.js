@@ -1,557 +1,543 @@
-import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js';
-import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js';
-import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js';
+/* eslint-disable no-undef */
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js'
+import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js'
+import { getFirestore, doc, setDoc, getDoc } from 'https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js'
+import { firebaseConfig, rapidApiConfig } from './config.js'
+let searchTimeout
+let selectedItem = null
+const fireBaseConf = {
+  apiKey: firebaseConfig.FIREBASE_API_KEY,
+  authDomain: firebaseConfig.FIREBASE_AUTH_DOMAIN,
+  databaseURL: firebaseConfig.FIREBASE_DATABASE_URL,
+  projectId: firebaseConfig.FIREBASE_PROJECT_ID,
+  storageBucket: firebaseConfig.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: firebaseConfig.FIREBASE_MESSAGING_SENDER_ID,
+  appId: firebaseConfig.FIREBASE_APP_ID,
+  measurementId: firebaseConfig.FIREBASE_MEASUREMENT_ID
+}
 
-let app;
-let auth;
-let db;
+class FirebaseApp {
+  constructor (config) {
+    this.app = initializeApp(config)
+    this.auth = getAuth(this.app)
+    this.db = getFirestore(this.app)
+    this.data = { categoria: [], items: [] }
+    this.itemEditadoId = null
+    this.uid = null
+  }
 
-const data = { categoria: [], items: [] };
-const utils = {
-  tipo: ["Pelicula", "Serie", "Anime", "Documental", "Podcast", "Otro"],
-};
-let itemEditadoId = null;
-
-const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
-};
-
-document.addEventListener("DOMContentLoaded", function () {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getFirestore(app);
-
-  setPersistence(auth, browserLocalPersistence)
-    .then(() => {
-      onAuthStateChanged(auth, (user) => {
-        if (user) {
-          cargarColecciones(user.uid);
-        } else {
-          console.log('No hay usuario autenticado');
-        }
-      });
-    })
-    .catch((error) => {
-      console.error('Error al configurar la persistencia:', error);
-    });
-});
-
-document.getElementById("completado").addEventListener("change", function () {
-  document.getElementById("completo").innerText = this.checked ? "Finalizado" : "Pendiente";
-});
-
-export function abrirPopup(tipo) {
-  let arreglado = []
-  if (tipo === "item") {
-    document.getElementById("popupForm").classList.remove("hidden");
-    document.getElementById("agregarItem").classList.remove("hidden");
-    document.getElementById("editarItem").classList.add("hidden");
-    let $nombre = document.getElementById("nombre");
-    
-
-    const choices = new Choices($nombre, {
-      shouldSort: false,
-      choices: arreglado,
-      callbackOnCreateTemplates: function (template) {
-        return {
-          item: ({ classNames }, data) => {
-            return template(`
-              <div class="${classNames.item} ${classNames.itemChoice} ${
-              data.disabled
-                ? classNames.itemDisabled
-                : classNames.itemSelectable
-            }" data-select-text="${this.config.itemSelectText}" data-choice ${
-              data.disabled
-                ? 'data-choice-disabled aria-disabled="true"'
-                : "data-choice-selectable"
-            } data-id="${data.value}" data-value="${data.label}" role="option">
-                ${data.img ? `<img src="${data.img}" alt="${data.label}" style="height: 50px; margin-right: 10px;">` : ''}
-                <span>${data.label}</span> - <span>${data.type}</span>
-              </div>`);
-          },
-          choice: ({ classNames }, data) => {
-            return template(`
-              <div class="${classNames.item} ${classNames.itemChoice} ${
-              data.disabled
-                ? classNames.itemDisabled
-                : classNames.itemSelectable
-            }" data-select-text="${this.config.itemSelectText}" data-choice ${
-              data.disabled
-                ? 'data-choice-disabled aria-disabled="true"'
-                : "data-choice-selectable"
-            } data-id="${data.value}" data-value="${data.label}" role="option">
-                ${data.img ? `<img src="${data.img}" alt="${data.label}" style="height: 50px; margin-right: 10px;">` : ''}
-                <span>${data.label}</span> - <span>${data.type}</span>
-              </div>`);
-          },
-        };
+  async init () {
+    await setPersistence(this.auth, browserLocalPersistence)
+    onAuthStateChanged(this.auth, (user) => {
+      if (user) {
+        document.getElementById('login').style.display = 'none'
+        document.getElementById('register').style.display = 'none'
+        document.getElementById('logoutBtn').style.display = 'block'
+        this.uid = user.uid
+        this.cargarColecciones()
+      } else {
+        document.getElementById('login').style.display = 'block'
+        document.getElementById('register').style.display = 'block'
+        document.getElementById('logoutBtn').style.display = 'none'
       }
-    });
+    })
+  }
 
+  async cargarColecciones () {
+    try {
+      const docSnap = await getDoc(doc(this.db, 'usuarios', this.uid))
 
-    $nombre.addEventListener("search", async function (event) {
-      let entrada = event.detail.value;
-      let datos = await consultaIngreso(entrada);
-      arreglado = arreglaDatos(datos);
-      choices.setChoices(arreglado, 'value', 'label', true);
-    });
-    cargaTipoSelect();
-    cargaCategoriasSelect();
-  } else if (tipo === "categoria") {
-    document.getElementById("popupFormCategoria").classList.remove("hidden");
+      if (docSnap.exists()) {
+        this.data.items = docSnap.data().items || []
+        this.data.categoria = docSnap.data().categoria || []
+
+        data = this.data
+        actualizarLista()
+      } else {
+        console.error('No se encontró el documento')
+      }
+    } catch (error) {
+      console.error('Error al cargar colecciones:', error)
+    }
+  }
+
+  async saveToFirebase (uid) {
+    try {
+      await setDoc(doc(this.db, 'usuarios', uid), this.data)
+    } catch (error) {
+      console.error('Error al guardar colecciones:', error)
+    }
+  }
+
+  async agregarElemento (item, tipo) {
+    const user = this.auth.currentUser
+    if (user) {
+      if (tipo === 'item') {
+        this.data.items.push(item)
+        await this.saveToFirebase(user.uid)
+      } else {
+        this.data.categoria.push(item)
+        await this.saveToFirebase(user.uid)
+      }
+    } else {
+      Swal.fire('Error', 'Por favor, inicie sesión para agregar elementos.', 'error')
+    }
+  }
+
+  async editarElemento (item) {
+    const user = this.auth.currentUser
+    if (user) {
+      try {
+        await setDoc(doc(this.db, 'usuarios', user.uid, 'colecciones', item.id), item)
+      } catch (error) {
+        console.error('Error al actualizar el elemento:', error)
+      }
+    }
+  }
+
+  async iniciarSesion (email, password) {
+    try {
+      const userCredential = await signInWithEmailAndPassword(this.auth, email, password)
+      const user = userCredential.user
+      this.uid = user.uid
+      await this.cargarColecciones()
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error)
+    }
+  }
+
+  async registrarUsuario (email, password) {
+    try {
+      const userCredential = await createUserWithEmailAndPassword(this.auth, email, password)
+      const user = userCredential.user
+      await this.crearListaUsuario(user.uid)
+    } catch (error) {
+      console.error('Error al registrar usuario:', error)
+      Swal.fire('Error', 'Error al registrar usuario: ' + error.message, 'error')
+    }
+  }
+
+  async crearListaUsuario (uid) {
+    try {
+      await setDoc(doc(this.db, 'usuarios', uid), { items: [], categoria: [] })
+    } catch (error) {
+      console.error('Error al crear la lista del usuario:', error)
+    }
+  }
+
+  async cerrarSesion () {
+    try {
+      await signOut(this.auth)
+      Swal.fire('Éxito', 'Sesión cerrada correctamente.', 'success')
+      localStorage.removeItem('data')
+      data = { categoria: [], items: [] }
+      actualizarLista()
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error)
+      Swal.fire('Error', 'Error al cerrar sesión: ' + error.message, 'error')
+    }
   }
 }
 
-export function cerrarPopup() {
-  document.getElementById("popupForm").classList.add("hidden");
-}
+const app = new FirebaseApp(fireBaseConf)
+document.addEventListener('DOMContentLoaded', async function () {
+  await app.init()
+  document.getElementById('completado').addEventListener('change', function () {
+    document.getElementById('completo').innerText = this.checked ? 'Finalizado' : 'Pendiente'
+  })
+  loadFromLocalStorage()
+})
 
-export function cerrarPopupCategoria() {
-  document.getElementById("popupFormCategoria").classList.add("hidden");
-}
+let data = { categoria: [], items: [] }
 
-export function cerrarPopupAuth() {
-  document.getElementById("popupAuth").classList.add("hidden");
-}
-
-export function agregarElemento() {
-  let user = auth.currentUser;
-  if (user) {
-    let item = {
-      id: crypto.randomUUID(),
-      nombre: document.getElementById("nombre").value,
-      tipo: document.getElementById("tipo").value,
-      episodios: document.getElementById("episodios").value || "N/A",
-      categoria: document.getElementById("categoria").value,
-      completado: document.getElementById("completado").checked ? "Sí" : "No",
-    };
-
-    data.items.push(item);
-    saveToFirebase(user.uid);
-    agregarItemLista(item);
-    resetInputsItem();
-    cerrarPopup();
-  } else {
-    alert('Por favor, inicie sesión para agregar elementos.');
+function abrirPopup (tipo) {
+  if (tipo === 'item') {
+    document.getElementById('popupForm').classList.remove('hidden')
+    document.getElementById('agregarItem').classList.remove('hidden')
+    document.getElementById('editarItem').classList.add('hidden')
+    cargaNombreSelect()
+    cargaTipoSelect()
+    cargaCategoriasSelect()
+  } else if (tipo === 'categoria') {
+    document.getElementById('popupFormCategoria').classList.remove('hidden')
   }
 }
 
-function resetInputsItem() {
-  document.getElementById("nombre").value = "";
-  document.getElementById("tipo").value = "";
-  document.getElementById("episodios").value = "";
-  document.getElementById("categoria").value = "";
-  document.getElementById("completado").checked = false;
+function cerrarPopup () {
+  document.getElementById('popupForm').classList.add('hidden')
 }
 
-export function editarElemento(id) {
-  resetInputsItem();
-
-  itemEditadoId = id;
-  let user = auth.currentUser;
-  if (user) {
-    const itemRef = doc(db, 'usuarios', user.uid, 'colecciones', id);
-    getDoc(itemRef)
-      .then((docSnap) => {
-        if (docSnap.exists()) {
-          let item = docSnap.data();
-          document.getElementById("nombre").value = item.nombre;
-          document.getElementById("tipo").value = item.tipo;
-          document.getElementById("episodios").value = item.episodios;
-          document.getElementById("categoria").value = item.categoria;
-          document.getElementById("completado").checked = item.completado === "Sí";
-
-          document.getElementById("popupForm").classList.remove("hidden");
-          document.getElementById("agregarItem").classList.add("hidden");
-          document.getElementById("editarItem").classList.remove("hidden");
-        }
-      })
-      .catch((error) => {
-        console.error('Error al cargar el elemento:', error);
-      });
-  }
+function cerrarPopupCategoria () {
+  document.getElementById('popupFormCategoria').classList.add('hidden')
 }
 
-
-export function guardarEdicion() {
-  let $nombre = document.getElementById("nombre");
-  let $tipo = document.getElementById("tipo");
-  let $episodios = document.getElementById("episodios");
-  let $categoria = document.getElementById("categoria");
-  let $completado = document.getElementById("completado");
-
-  if (!$nombre.value || !$tipo.value || !$categoria.value) {
-    alert("Por favor, completa todos los campos");
-    return;
-  }
-
-  let item = {
-    id: itemEditadoId,
-    nombre: $nombre.value,
-    tipo: $tipo.value,
-    episodios: $episodios.value || "N/A",
-    categoria: $categoria.value,
-    completado: $completado.checked ? "Sí" : "No",
-  };
-
-  let user = auth.currentUser;
-  if (user) {
-    setDoc(doc(db, 'usuarios', user.uid, 'colecciones', item.id), item)
-      .then(() => {
-        console.log('Elemento actualizado en Firebase');
-        actualizarLista();
-        cerrarPopup();
-      })
-      .catch((error) => {
-        console.error('Error al actualizar el elemento:', error);
-      });
-  }
+function cerrarPopupAuth () {
+  document.getElementById('popupAuth').classList.add('hidden')
 }
 
-export function agregarCategoria() {
-  let $nuevaCategoria = document.getElementById("nuevaCategoria").value;
-
-  if (!$nuevaCategoria) {
-    alert("Por favor, ingresa un nombre para la categoría");
-    return;
+function agregarElemento () {
+  if (!selectedItem) {
+    Swal.fire('Error', 'No se ha seleccionado ningún elemento.', 'error')
+    return
   }
 
-  if (data.categoria.some((categoria) => categoria.nombre === $nuevaCategoria)) {
-    alert("La categoría ya existe");
-    return;
-  }
-
-  let categoria = {
+  const item = {
     id: crypto.randomUUID(),
-    nombre: $nuevaCategoria,
-  };
+    nombre: selectedItem.label,
+    tipo: document.getElementById('tipo').value,
+    episodios: document.getElementById('episodios').value || 'N/A',
+    categoria: document.getElementById('categoria').value,
+    completado: document.getElementById('completado').checked ? 'Sí' : 'No',
+    img: selectedItem.img,
+    anio: selectedItem.anio
+  }
 
-  data.categoria.push(categoria);
-  cargaCategoriasSelect();
-
-  saveToLocalStorage();
-  document.getElementById("nuevaCategoria").value = "";
-  cerrarPopupCategoria();
+  app.agregarElemento(item, 'item').then(() => {
+    data.items.push(item)
+    saveToLocalStorage()
+    agregarItemLista(item)
+    resetInputsItem()
+    cerrarPopup()
+  })
 }
 
-function cargaCategoriasSelect() {
-  let select = document.getElementById("categoria");
-  select.innerHTML = "";
+function guardarEdicion () {
+  const item = {
+    id: app.itemEditadoId,
+    nombre: document.getElementById('nombre').value,
+    tipo: document.getElementById('tipo').value,
+    episodios: document.getElementById('episodios').value || 'N/A',
+    categoria: document.getElementById('categoria').value,
+    completado: document.getElementById('completado').checked ? 'Sí' : 'No'
+  }
 
-  let option = document.createElement("option");
-  option.value = "";
-  option.text = "Seleccionar Categoría";
-  select.appendChild(option);
+  app.editarElemento(item).then(() => {
+    const index = data.items.findIndex(i => i.id === item.id)
+    if (index !== -1) {
+      data.items[index] = item
+      saveToLocalStorage()
+      actualizarLista()
+      cerrarPopup()
+    }
+  })
+}
+
+function mostrarPopupAuth (tipo) {
+  document.getElementById('popupAuth').classList.remove('hidden')
+  if (tipo === 'login') {
+    document.getElementById('authTitle').innerText = 'Iniciar Sesión'
+    document.getElementById('authAction').innerText = 'Ingresar'
+    document.getElementById('authAction').onclick = () => {
+      const email = document.getElementById('authEmail').value
+      const password = document.getElementById('authPassword').value
+      app.iniciarSesion(email, password).then(() => cerrarPopupAuth())
+    }
+  } else if (tipo === 'register') {
+    document.getElementById('authTitle').innerText = 'Registrarse'
+    document.getElementById('authAction').innerText = 'Registrar'
+    document.getElementById('authAction').onclick = () => {
+      const email = document.getElementById('authEmail').value
+      const password = document.getElementById('authPassword').value
+      app.registrarUsuario(email, password).then(() => cerrarPopupAuth())
+    }
+  }
+}
+
+function agregarCategoria () {
+  // TODO:revisando
+  const categoria = {
+    id: crypto.randomUUID(),
+    nombre: document.getElementById('nuevaCategoria').value
+  }
+  data.categoria.push(categoria)
+  agregarElemento(categoria, 'categoria')
+  saveToLocalStorage()
+  cargaCategoriasSelect()
+  // agregarCategoriaElemento(categoria)
+  document.getElementById('nuevaCategoria').value = ''
+  cerrarPopupCategoria()
+}
+
+function actualizarLista () {
+  const list = document.getElementById('list')
+  list.innerHTML = ''
+  data.items.forEach((item) => agregarItemLista(item))
+}
+
+function agregarItemLista (item) {
+  if (!item) return
+  const card = document.createElement('div')
+  card.classList.add('card')
+  card.setAttribute('data-id', item.id)
+
+  const title = document.createElement('h3')
+  title.textContent = item.nombre
+
+  const details = document.createElement('p')
+  const categoria = data.categoria.find(categoria => categoria.id === item.categoria)?.nombre
+  details.innerHTML = `
+    Tipo: ${item.tipo}<br>
+    Episodios: ${item.episodios}<br>
+    Finalizado: ${item.completado}<br>
+    Categoría: ${categoria || 'Sin categoría'}
+  `
+
+  const editButton = document.createElement('button')
+  editButton.textContent = 'Editar'
+  editButton.classList.add('edit-button')
+  editButton.addEventListener('click', () => editarElemento(item.id))
+
+  const deleteButton = document.createElement('button')
+  deleteButton.classList.add('delete-button')
+  deleteButton.addEventListener('click', () => {
+    Swal.fire({
+      title: '¿Está seguro?',
+      text: '¡No podrás revertir esto!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Sí, eliminarlo!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        card.remove()
+        removeFromLocalStorage(item.id)
+        Swal.fire('¡Eliminado!', 'El elemento ha sido eliminado.', 'success')
+      }
+    })
+  })
+
+  card.appendChild(title)
+  card.appendChild(details)
+  card.appendChild(editButton)
+  card.appendChild(deleteButton)
+  document.getElementById('list').appendChild(card)
+}
+
+function removeFromLocalStorage (id) {
+  data.items = data.items.filter((item) => item.id !== id)
+  saveToLocalStorage()
+}
+
+function saveToLocalStorage () {
+  localStorage.setItem('data', JSON.stringify(data))
+}
+
+function loadFromLocalStorage () {
+  if (localStorage.getItem('data')) {
+    data = JSON.parse(localStorage.getItem('data'))
+    data.items.forEach((item) => agregarItemLista(item))
+  }
+}
+
+function cargaTipoSelect () {
+  const select = document.getElementById('tipo')
+  select.innerHTML = ''
+  const tipos = ['Pelicula', 'Serie', 'Anime', 'Documental', 'Podcast', 'Otro']
+
+  const option = document.createElement('option')
+  option.value = ''
+  option.text = 'Seleccionar Tipo'
+  select.appendChild(option)
+
+  tipos.forEach(tipo => {
+    const option = document.createElement('option')
+    option.value = tipo
+    option.text = tipo
+    select.appendChild(option)
+  })
+}
+
+function cargaCategoriasSelect () {
+  const select = document.getElementById('categoria')
+  select.innerHTML = ''
+
+  const option = document.createElement('option')
+  option.value = ''
+  option.text = 'Seleccionar Categoría'
+  select.appendChild(option)
 
   data.categoria.forEach((categoria) => {
-    let option = document.createElement("option");
-    option.value = categoria.id;
-    option.text = categoria.nombre;
-    select.appendChild(option);
-  });
+    const option = document.createElement('option')
+    option.value = categoria.id
+    option.text = categoria.nombre
+    select.appendChild(option)
+  })
 }
 
-function agregarItemLista(item) {
-  let card = document.createElement("div");
-  card.classList.add("card");
-  card.setAttribute("data-id", item.id);
+function cargaNombreSelect () {
+  const $nombre = document.getElementById('nombre')
+  const $nombreElm = document.getElementById('nombreElm')
 
-  let title = document.createElement("h3");
-  title.textContent = item.nombre;
+  $nombreElm.style.display = 'none' // Inicialmente ocultar el contenedor de resultados
 
-  let details = document.createElement("p");
-  details.innerHTML = `
-        Tipo: ${item.tipo}<br>
-        Episodios: ${item.episodios}<br>
-        Finalizado: ${item.completado}<br>
-        Categoría: ${
-          data.categoria.find((categoria) => categoria.id === item.categoria)
-            .nombre
-        }
-    `;
+  $nombre.addEventListener('input', function () {
+    clearTimeout(searchTimeout)
+    searchTimeout = setTimeout(() => {
+      buscarAgregarOpciones($nombre.value)
+    }, 500)
+  })
 
-  let editButton = document.createElement("button");
-  editButton.textContent = "Editar";
-  editButton.classList.add("edit-button");
-  editButton.addEventListener("click", function () {
-    editarElemento(item.id);
-  });
-
-  let deleteButton = document.createElement("button");
-  deleteButton.classList.add("delete-button");
-  deleteButton.addEventListener("click", function () {
-    if (confirm("¿Está seguro de que desea eliminar este elemento?")) {
-      card.remove();
-      removeFromLocalStorage(item.id);
+  $nombreElm.addEventListener('click', function (event) {
+    const clickedElement = event.target.closest('.autocomplete-item')
+    if (clickedElement) {
+      selectedItem = {
+        id: clickedElement.dataset.id,
+        label: clickedElement.dataset.label,
+        img: clickedElement.dataset.img,
+        anio: clickedElement.dataset.anio
+      }
+      $nombre.value = selectedItem.label
+      $nombreElm.style.display = 'none' // Ocultar el contenedor de resultados después de la selección
     }
-  });
-
-  card.appendChild(title);
-  card.appendChild(details);
-  card.appendChild(editButton);
-  card.appendChild(deleteButton);
-  document.getElementById("list").appendChild(card);
+  })
 }
 
-function agregarCategoriaElemento(categoria) {
-  let li = document.createElement("li");
-  li.textContent = categoria.nombre;
-  li.setAttribute("data-id", categoria.id);
+async function buscarAgregarOpciones (query) {
+  const $nombreElm = document.getElementById('nombreElm')
+  $nombreElm.innerHTML = '' // Clear previous suggestions
 
-  let deleteButton = document.createElement("button");
-  deleteButton.classList.add("delete-button");
-  deleteButton.addEventListener("click", function () {
-    if (confirm("¿Está seguro de que desea eliminar esta categoría?")) {
-      li.remove();
-      removeCategoriaFromLocalStorage(categoria.id);
-    }
-  });
-
-  li.appendChild(deleteButton);
-  document.getElementById("categoriaList").appendChild(li);
-}
-
-export function saveToLocalStorage() {
-  let user = auth.currentUser;
-  if (user) {
-    saveToFirebase(user.uid);
-  } else {
-    localStorage.setItem("data", JSON.stringify(data));
+  if (!query) {
+    $nombreElm.style.display = 'none'
+    return
   }
-}
+  if (!query) return
 
-export function loadFromLocalStorage() {
-  let user = auth.currentUser;
-  if (user) {
-    cargarColecciones(user.uid);
-  } else if (localStorage.getItem("data")) {
-    data = JSON.parse(localStorage.getItem("data"));
-    data.items.forEach((item) => agregarItemLista(item));
-    data.categoria.forEach((categoria) => agregarCategoriaElemento(categoria));
-  }
-}
-
-
-function removeFromLocalStorage(id) {
-  data.items = data.items.filter((item) => item.id !== id);
-  saveToLocalStorage();
-}
-
-function removeCategoriaFromLocalStorage(id) {
-  data.categoria = data.categoria.filter((categoria) => categoria.id !== id);
-  saveToLocalStorage();
-}
-
-function cargaTipoSelect() {
-  let select = document.getElementById("tipo");
-  select.innerHTML = "";
-  let tipos = utils.tipo;
-
-  let option = document.createElement("option");
-  option.value = "";
-  option.text = "Seleccionar Tipo";
-  select.appendChild(option);
-
-  for (const tipo of tipos) {
-    let option = document.createElement("option");
-    option.value = tipo;
-    option.text = tipo;
-    select.appendChild(option);
-  }
-}
-
-export function buscarElemento() {
-  let input = document.getElementById("searchInput").value.toLowerCase();
-  let items = document.querySelectorAll(".card");
-
-  items.forEach((item) => {
-    let nombre = item.querySelector("h3").textContent.toLowerCase();
-    if (nombre.includes(input)) {
-      item.style.display = "";
-    } else {
-      item.style.display = "none";
-    }
-  });
-}
-
-export function ordenarPorCategoria() {
-  data.items.sort((a, b) => {
-    let categoriaA = data.categoria
-      .find((categoria) => categoria.id === a.categoria)
-      .nombre.toLowerCase();
-    let categoriaB = data.categoria
-      .find((categoria) => categoria.id === b.categoria)
-      .nombre.toLowerCase();
-    return categoriaA.localeCompare(categoriaB);
-  });
-  actualizarLista();
-}
-
-function actualizarLista() {
-  let list = document.getElementById("list");
-  list.innerHTML = "";
-  data.items.forEach((item) => agregarItemLista(item));
-}
-
-function buscaElemento() {
-  let $nombre = document.getElementById("nombre");
-
-  if ($nombre.value.length < 3) {
-  }
-}
-
-async function consultaIngreso(entrada) {
-  // buscamos usando el api de IMDB
-  const url = `https://imdb8.p.rapidapi.com/auto-complete?q=${entrada}`;
+  const url = `https://imdb8.p.rapidapi.com/auto-complete?q=${query}`
   const options = {
     method: 'GET',
     headers: {
-      'x-rapidapi-key': '57f9500b78msh7da6ebd5c5422a9p1b07adjsn0fdf9dff2727',
-      'x-rapidapi-host': 'imdb8.p.rapidapi.com'
+      'x-rapidapi-key': rapidApiConfig.apiKey,
+      'x-rapidapi-host': rapidApiConfig.host
     }
-  };
+  }
+
   try {
-    const response = await fetch(url, options);
-    const data = await response.json();
-    return data.d; 
+    const response = await fetch(url, options)
+    const data = await response.json()
+    const elementos = data.d.map(item => ({
+      id: item.id,
+      label: item.l,
+      img: item.i?.imageUrl || '',
+      anio: item.y || ''
+    }))
+
+    if (elementos.length > 0) {
+      elementos.forEach(elemento => {
+        const div = document.createElement('div')
+        div.classList.add('autocomplete-item')
+        div.dataset.id = elemento.id
+        div.dataset.label = elemento.label
+        div.dataset.img = elemento.img
+        div.dataset.anio = elemento.anio
+        div.innerHTML = `
+          ${elemento.img ? `<img src="${elemento.img}" alt="${elemento.label}" style="height: 50px; margin-right: 10px;">` : ''}
+          <span>${elemento.label}</span> - <span>${elemento.anio}</span>
+        `
+        $nombreElm.appendChild(div)
+      })
+      $nombreElm.style.display = 'block' // Mostrar el contenedor de resultados si hay elementos
+    } else {
+      $nombreElm.style.display = 'none' // Ocultar el contenedor de resultados si no hay elementos
+    }
   } catch (error) {
-    console.error(error);
-    return [];
+    console.error('Error al buscar opciones:', error)
+    Swal.fire('Error', 'Error al buscar opciones: ' + error.message, 'error')
   }
 }
-function arreglaDatos(datos) {
-  return datos.map(obj => ({
-    value: obj.id,
-    label: obj.l + (obj.y ? ` (${obj.y})` : ''),
-    img: obj.i?.imageUrl || '',
-    type: obj.q || ''
-  }));
+
+function resetInputsItem () {
+  document.getElementById('nombre').value = ''
+  document.getElementById('tipo').value = ''
+  document.getElementById('episodios').value = ''
+  document.getElementById('categoria').value = ''
+  document.getElementById('completado').checked = false
+  selectedItem = null // Reset selected item
 }
 
-// function arreglaDatos(datos) {
-//   console.log(datos);
-//   let salida = [];
+function ordenarCategoria () {
+  const $ordCategoria = document.getElementById('ordCategoria')
+  // verificar si caregoria contiene la clases is-active
 
-//   datos.map(obj => {
-//     let img = '';
-//     let tipo = '';
-//     let titulo = obj.l;
-//     if (obj.y) titulo += ` (${obj.y})`;
-//     if (obj.i?.imageUrl) { img = obj.i.imageUrl; }
-//     if (obj.q) { tipo = obj.q; }
-//     salida.push(
-//       {
-//         value: obj.id,
-//         label: titulo,
-//         img: img,
-//         type: tipo
-//       });
-//   });
-//   return salida;
-// }
+  if ($ordCategoria.classList.contains('is-active')) {
+    $ordCategoria.classList.remove('is-active')
+    app.cargarColecciones()
+    return
+  } else {
+    $ordCategoria.classList.add('is-active')
+  }
 
-
-function iniciarSesion(email, password) {
-  auth.signInWithEmailAndPassword(email, password)
-    .then((userCredential) => {
-      // Sesión iniciada
-      let user = userCredential.user;
-      console.log('Sesión iniciada:', user);
-      // Cargar colecciones del usuario
-      cargarColecciones(user.uid);
-    })
-    .catch((error) => {
-      console.error('Error al iniciar sesión:', error);
-    });
-}
-
-// Registrar nuevo usuario
-export function registrarUsuario() {
-  let email = document.getElementById("authEmail").value;
-  let password = document.getElementById("authPassword").value;
-  createUserWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      let user = userCredential.user;
-      crearListaUsuario(user.uid);
-      cerrarPopupAuth();
-    })
-    .catch((error) => {
-      console.error('Error al registrar usuario:', error);
-      alert('Error al registrar usuario: ' + error.message);
-    });
-}
-
-
-// Crear colecciones para el usuario
-export function autenticarUsuario() {
-  let email = document.getElementById("authEmail").value;
-  let password = document.getElementById("authPassword").value;
-  signInWithEmailAndPassword(auth, email, password)
-    .then((userCredential) => {
-      let user = userCredential.user;
-      cargarColecciones(user.uid);
-      cerrarPopupAuth();
-    })
-    .catch((error) => {
-      console.error('Error al iniciar sesión:', error);
-      alert('Error al iniciar sesión: ' + error.message);
-    });
-}
-
-// Cargar colecciones del usuario
-export function cargarColecciones(uid) {
-  getDoc(doc(db, 'usuarios', uid))
-    .then((docSnap) => {
-      if (docSnap.exists()) {
-        data.items = docSnap.data().items || [];
-        data.categoria = docSnap.data().categoria || [];
-        console.log('Datos del usuario:', data);
-        actualizarLista();
-      } else {
-        console.log('No se encontraron colecciones para este usuario.');
+  const $elemList = document.getElementById('list')
+  $elemList.innerHTML = ''
+  for (const x of data.categoria) {
+    const div = document.createElement('div')
+    div.classList.add('catDiv')
+    // añadimos el nombre de la categoria
+    const h2 = document.createElement('h2')
+    h2.textContent = x.nombre
+    div.appendChild(h2)
+    // añadimos div que contendra los elementos de la categoria
+    const divElem = document.createElement('div')
+    divElem.classList.add('catElem')
+    div.appendChild(divElem)
+    // añadimos los elementos de la categoria
+    for (const y of data.items) {
+      if (y.categoria === x.id) {
+        const card = document.createElement('div')
+        card.classList.add('card')
+        card.setAttribute('data-id', y.id)
+        const title = document.createElement('h3')
+        title.textContent = y.nombre
+        const details = document.createElement('p')
+        details.innerHTML = `
+          Tipo: ${y.tipo}<br>
+          Episodios: ${y.episodios}<br>
+          Finalizado: ${y.completado}<br>
+        `
+        const editButton = document.createElement('button')
+        editButton.textContent = 'Editar'
+        editButton.classList.add('edit-button')
+        editButton.addEventListener('click', () => editarElemento(y.id))
+        const deleteButton = document.createElement('button')
+        deleteButton.classList.add('delete-button')
+        deleteButton.addEventListener('click', () => {
+          Swal.fire({
+            title: '¿Está seguro?',
+            text: '¡No podrás revertir esto!',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: 'Sí, eliminarlo!'
+          }).then((result) => {
+            if (result.isConfirmed) {
+              card.remove()
+              removeFromLocalStorage(y.id)
+              Swal.fire('¡Eliminado!', 'El elemento ha sido eliminado.', 'success')
+            }
+          })
+        }
+        )
+        card.appendChild(title)
+        card.appendChild(details)
+        card.appendChild(editButton)
+        card.appendChild(deleteButton)
+        divElem.appendChild(card)
       }
-    })
-    .catch((error) => {
-      console.error('Error al cargar colecciones:', error);
-    });
-}
-// Guardar colecciones en Firebase
-export function saveToFirebase(uid) {
-  setDoc(doc(db, 'usuarios', uid), data)
-    .then(() => {
-      console.log('Colecciones guardadas en Firebase');
-    })
-    .catch((error) => {
-      console.error('Error al guardar colecciones:', error);
-    });
-}
 
-export function mostrarPopupAuth(tipo) {
-  document.getElementById("popupAuth").classList.remove("hidden");
-  if (tipo === 'login') {
-    document.getElementById("authTitle").innerText = "Iniciar Sesión";
-    document.getElementById("authAction").innerText = "Ingresar";
-    document.getElementById("authAction").onclick = autenticarUsuario;
-  } else if (tipo === 'register') {
-    document.getElementById("authTitle").innerText = "Registrarse";
-    document.getElementById("authAction").innerText = "Registrar";
-    document.getElementById("authAction").onclick = registrarUsuario;
+      $elemList.appendChild(div)
+    }
   }
 }
 
-export function crearListaUsuario(uid) {
-  setDoc(doc(db, 'usuarios', uid), { items: [], categoria: [] })
-    .then(() => {
-      console.log('Lista inicial creada para el usuario:', uid);
-    })
-    .catch((error) => {
-      console.error('Error al crear la lista del usuario:', error);
-    });
-}
-
+window.mostrarPopupAuth = mostrarPopupAuth
+window.cerrarPopupAuth = cerrarPopupAuth
+window.agregarElemento = agregarElemento
+window.buscarElemento = () => { /* Implement search functionality */ }
+window.ordenarPorCategoria = ordenarCategoria
+window.abrirPopup = abrirPopup
+window.cerrarPopup = cerrarPopup
+window.cerrarPopupCategoria = cerrarPopupCategoria
+window.agregarCategoria = agregarCategoria
+window.guardarEdicion = guardarEdicion
+window.cerrarSesion = () => app.cerrarSesion()
