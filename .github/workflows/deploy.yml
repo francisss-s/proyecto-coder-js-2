@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - main
 
 jobs:
   build:
@@ -36,6 +37,13 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./
 
+    - name: Set environment URL
+      id: deployment
+      run: echo "url=${{ github.event.repository.html_url }}" >> $GITHUB_ENV
+
+    - name: Output environment URL
+      run: echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}"
+
   environment:
     name: github-pages
-    url: ${{ steps.build.outputs.page_url }}
+    url: ${{ steps.deployment.outputs.page_url }}
