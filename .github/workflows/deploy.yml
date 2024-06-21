@@ -41,8 +41,8 @@ jobs:
       id: deployment
       run: echo "url=${{ github.event.repository.html_url }}" >> $GITHUB_ENV
 
-    - name: Output environment URL
-      run: echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}"
+    # - name: Output environment URL
+    #   run: echo "Deployment URL: ${{ steps.deployment.outputs.page_url }}"
 
     environment:
       name: github-pages
